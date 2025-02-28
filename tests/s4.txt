@@ -1,0 +1,17 @@
+#
+# DIFFICULTY: MIDDLE
+# ANSWER: cancel extra blanks
+# Note: There are two spaces after "blanks" in the append command and one in the insert command but none in the answer.
+#
+.
+a    cancel  extra blanks  
+i 
+dw
+r
+^
+dw
+w
+h
+x
+.
+q

@@ -1,0 +1,13 @@
+#
+# DIFFICULTY: MIDDLE
+# ANSWER: an easy test
+#
+i  not an easy test
+.
+dw
+$
+u
+r
+.
+s
+q

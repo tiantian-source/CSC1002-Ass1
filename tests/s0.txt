@@ -1,0 +1,9 @@
+#
+# DIFFICULTY: EASY
+# ANSWER: this is an easy test
+#
+athis is a test
+b
+h
+in easy
+q

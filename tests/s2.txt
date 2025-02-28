@@ -1,0 +1,12 @@
+#
+# DIFFICULTY: MIDDLE
+# ANSWER: 1 * 1 = 1
+#
+?
+a1 ? 1 = 1
+^
+l
+r
+x
+i*
+q
