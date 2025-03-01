@@ -57,46 +57,41 @@ def move_left(n=1):
 def move_right(n=1):
     """Move cursor right by n characters"""
     global cursor_pos
-    cursor_pos = min(len(content)-1, cursor_pos + n)
+    cursor_pos = min(len(content), cursor_pos + n)
 
 def move_word_backward():
     """Move cursor to next word beginning"""
     global cursor_pos
         
-    while content[cursor_pos] != " ":
+    while cursor_pos <= len(content) and content[cursor_pos] != " ":
         cursor_pos += 1 
-        if cursor_pos >= len(content):
-            cursor_pos -= 1
-            return  
-    cursor_pos += 1  
+    while cursor_pos < len(content) and content[cursor_pos] == " ":
+        cursor_pos += 1
       
 def move_word_forward():
     """Move cursor to previous word beginning"""
     global cursor_pos
     
     """Find last word boundary before cursor"""
-    if content[cursor_pos - 1] == " ":
-        cursor_pos -= 2
-    if content[cursor_pos] == " ":
+    if cursor_pos > 0 and content[cursor_pos - 1] == " ":
         cursor_pos -= 1
-    while content[cursor_pos] != " ":
+    while cursor_pos > 0 and content[cursor_pos - 1] != " ":
         cursor_pos -= 1
-        if cursor_pos == 0:
-           return
-    cursor_pos += 1   
+    while cursor_pos > 0 and content[cursor_pos - 1] == " ":
+        cursor_pos -= 1
             
 def execute_insert(text):
     """Insert text to the left of cursor"""
     global content, cursor_pos
     content = content[:cursor_pos] + text + content[cursor_pos:]
-    cursor_pos += len(text)
+    cursor_pos = max(0, cursor_pos)
     """Cursor moves to start of inserted text"""
 
 def execute_append(text):
     """Append text to the right of cursor"""
     global content, cursor_pos
     content = content[:cursor_pos+1] + text + content[cursor_pos+1:]
-    cursor_pos += len(text)
+    cursor_pos += len(text) - 1
 
 def delete_ch():
     global content,cursor_pos
@@ -107,23 +102,21 @@ def delete_word():
     global content, cursor_pos
     if cursor_pos >= len(content):
         return
-    """Find next word boundary"""
+    if cursor_pos >= len(content):
+        return
     end = cursor_pos
-    """Skip initial spaces"""
-    while end < len(content) and content[end] == " ":
+    while end+1 < len(content) and content[end] == " " and content[end +1] == " ":
         end += 1
-    """Find the end of the word"""
     while end < len(content) and re.match(r'\w', content[end]):
         end += 1
-    """Find the end of the trailing punctuation"""
     while end < len(content) and re.match(r'[,.!?]', content[end]):
         end += 1
-    """Skip trailing spaces"""
     while end < len(content) and content[end] == " ":
         end += 1
-    
-    """Update content by removing the word and trailing punctuation"""
     content = content[:cursor_pos] + content[end:]
+
+
+
 
 def handle_undo():
     """Undo last operation"""
@@ -169,56 +162,78 @@ def display_content():
 def parse_command(cmd):
     """Parse and execute user command"""
     global last_valid_cmd,pre_undo_cmd
+    if cmd not in ('?',".",'h','l','^','$','w','b','dw','x','u','q','s','r') and  cmd[0]not in('i','a'):
+        return True
+    if cmd not in ('u', '?', 'r'):
+        save_state()
+    pre_undo_cmd = last_valid_cmd
+    if cmd not in ('u','r'):
+        last_valid_cmd = cmd         
+           
+    if cmd == "?":
+        show_help()
+        return False
+    elif cmd == ".":
+        toggle_cursor()
+        return False
+    elif cmd == "h":
+        move_left()  
+        return False
+    elif cmd == "l":
+        move_right() 
+        return False
+    elif cmd == "^":
+        move_left(len(content))
+        return False
+    elif cmd == "$":
+        move_right(len(content)-1)
+        return False
+    elif cmd == "w":
+        move_word_backward()
+        return False
+    elif cmd == "b":
+        move_word_forward()
+        return False
+    elif cmd[0] == "i":
+        execute_insert(cmd[1:])
+        return False
+    elif cmd[0] == "a":
+        execute_append(cmd[1:])
+        return False
+    elif cmd == "x":
+        delete_ch()  
+        return False
+    elif cmd == "dw":
+        delete_word()
+        return False
+    elif cmd == "u":
+        handle_undo()
+        return False
+    elif cmd == "r":
+        handle_repeat()
+        return False
+    elif cmd == "s":
+        show_content()
+        return False
+    elif cmd == "q":
+        None
+        return False
     
-    # Command pattern matching
-    patterns = [
-        (r'^\?$', lambda _: show_help()),
-        (r'^\.$', lambda _: toggle_cursor()),
-        (r'^h$', lambda _: move_left()),
-        (r'^l$', lambda _: move_right()),
-        (r'^\^$', lambda _: move_left(len(content))),
-        (r'^\$$', lambda _: move_right(len(content)-1)),
-        (r'^w$', lambda _: move_word_backward()),
-        (r'^b$', lambda _: move_word_forward()),
-        (r'^i\s*(.*)\s*$', lambda m: execute_insert(m.group(1))),
-        (r'^a\s*(.*)\s*$', lambda m: execute_append(m.group(1))),
-        (r'^x$', lambda _: delete_ch()), 
-        (r'^dw$', lambda _: delete_word()),
-        (r'^u$', lambda _: handle_undo()),
-        (r'^r$', lambda _: handle_repeat()),
-        (r'^s$', lambda _: show_content()),
-        (r'^q$', lambda _: None)
-    ]
-
-    for pattern, handler in patterns:
-        if re.match(pattern, cmd):
-            if cmd not in ('u', '?', 'r'):
-                save_state()
-            pre_undo_cmd = last_valid_cmd
-            if cmd not in ('u','r'):
-                last_valid_cmd = cmd
-                
-            handler(re.match(pattern, cmd))
-            return True
-    return False
-
+        
 def main():
     """Main program loop"""
     global last_valid_cmd
     while True:
         try:
-            cmd = input(">").strip()
-            if  not cmd:
+            cmd = input(">")
+            if not cmd:
                 continue
-             
-              
+                   
             if cmd == 'q':
                 break
                 
-            if not parse_command(cmd): 
+            if parse_command(cmd) == True:
                 """Invalid command"""
-                
-                display_content()
                 continue
                 
             if cmd not in ('?', 'q'):
