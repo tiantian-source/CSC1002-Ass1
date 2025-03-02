@@ -12,7 +12,6 @@ undo_stack = []       # Stack for undo operations (stores tuples of (content, cu
 last_valid_cmd = None # Last valid command for repeat (excluding undo/help)
 show_cursor = False
 pre_undo_cmd = None
-pre_undo = False
 
 """ANSI escape codes for cursor highlighting"""
 CURSOR_START = "\033[42m"
@@ -73,13 +72,12 @@ def move_word_forward():
     global cursor_pos
     
     """Find last word boundary before cursor"""
-    if cursor_pos > 0 and content[cursor_pos - 1] == " ":
-        cursor_pos -= 1
     while cursor_pos > 0 and content[cursor_pos - 1] != " ":
         cursor_pos -= 1
     while cursor_pos > 0 and content[cursor_pos - 1] == " ":
         cursor_pos -= 1
-            
+    cursor_pos += 1     
+       
 def execute_insert(text):
     """Insert text to the left of cursor"""
     global content, cursor_pos
@@ -102,9 +100,8 @@ def delete_word():
     global content, cursor_pos
     if cursor_pos >= len(content):
         return
-    if cursor_pos >= len(content):
-        return
     end = cursor_pos
+            
     while end+1 < len(content) and content[end] == " " and content[end +1] == " ":
         end += 1
     while end < len(content) and re.match(r'\w', content[end]):
@@ -113,23 +110,22 @@ def delete_word():
         end += 1
     while end < len(content) and content[end] == " ":
         end += 1
-    content = content[:cursor_pos] + content[end:]
-
-
-
+    if end == len(content)-1:
+        content = content[:end-1]
+    content = content[:cursor_pos] + content[end:] 
+    
 
 def handle_undo():
     """Undo last operation"""
-    global content, cursor_pos, undo_stack,pre_undo_cmd,pre_undo
+    global content, cursor_pos, undo_stack,pre_undo_cmd
     if undo_stack:
         prev_state = undo_stack.pop()
         content, cursor_pos = prev_state
-        pre_undo = True
-
+        
 def handle_repeat():
     """Repeat last valid command"""
-    global last_valid_cmd, pre_undo_cmd,pre_undo
-    target_cmd = pre_undo_cmd if pre_undo else last_valid_cmd
+    global last_valid_cmd, pre_undo_cmd
+    target_cmd = last_valid_cmd
     if target_cmd and target_cmd not in ('u', '?','r',):
         parse_command(target_cmd)
         pre_undo = False
@@ -143,7 +139,6 @@ def display_content():
     """Display content with cursor highlighting"""
     if not content:
         return
-    
     if cursor_pos >= len(content):
         if show_cursor:
             displayed = content + CURSOR_START + ' ' + CURSOR_END
@@ -166,58 +161,49 @@ def parse_command(cmd):
         return True
     if cmd not in ('u', '?', 'r'):
         save_state()
-    pre_undo_cmd = last_valid_cmd
+            
+    if cmd == "u":
+        last_valid_cmd = pre_undo_cmd
+        pre_undo_cmd = None  
+        
+    pre_undo_cmd= last_valid_cmd  
+    
     if cmd not in ('u','r'):
-        last_valid_cmd = cmd         
-           
+        last_valid_cmd = cmd   
+        
     if cmd == "?":
         show_help()
-        return False
     elif cmd == ".":
         toggle_cursor()
-        return False
     elif cmd == "h":
-        move_left()  
-        return False
+        move_left()
     elif cmd == "l":
         move_right() 
-        return False
     elif cmd == "^":
         move_left(len(content))
-        return False
     elif cmd == "$":
         move_right(len(content)-1)
-        return False
     elif cmd == "w":
         move_word_backward()
-        return False
     elif cmd == "b":
         move_word_forward()
-        return False
     elif cmd[0] == "i":
         execute_insert(cmd[1:])
-        return False
     elif cmd[0] == "a":
         execute_append(cmd[1:])
-        return False
     elif cmd == "x":
         delete_ch()  
-        return False
     elif cmd == "dw":
         delete_word()
-        return False
     elif cmd == "u":
         handle_undo()
-        return False
     elif cmd == "r":
         handle_repeat()
-        return False
     elif cmd == "s":
         show_content()
-        return False
     elif cmd == "q":
         None
-        return False
+    return False
     
         
 def main():
